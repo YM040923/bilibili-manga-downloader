@@ -18,7 +18,7 @@ const searchPageCount = computed(() => {
   if (searchRespData.value === undefined) {
     return 0;
   }
-  const total = searchRespData.value.comic_data.total_num;
+  const total = searchRespData.value.total_num;
   return Math.floor(total / 20) + 1;
 });
 
@@ -79,7 +79,7 @@ async function searchById(comicId: number) {
     </div>
     <div v-if="searchRespData!==undefined" class="flex flex-col gap-row-1 overflow-auto p-2">
       <div class="flex flex-col gap-row-2 overflow-auto">
-        <comic-card v-for="comicInSearch in searchRespData.comic_data.list"
+        <comic-card v-for="comicInSearch in searchRespData.list"
                     :key="comicInSearch.id"
                     :comic-info="comicInSearch"
                     v-model:current-tab-name="currentTabName"
