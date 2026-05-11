@@ -213,8 +213,8 @@ impl BiliClient {
         let cookie = self.cookie();
         let payload = json!({
             "keyword": keyword,
-            "pageNum": page_num,
-            "pageSize": 20,
+            "page_num": page_num,
+            "page_size": 20,
         });
         let referer = "https://manga.bilibili.com/search?from=manga_homepage";
         // 发送搜索漫画请求
@@ -237,8 +237,9 @@ impl BiliClient {
         let bili_resp = serde_json::from_str::<BiliResp>(&body)
             .context(format!("将body解析为BiliResp失败: {body}"))?;
         // 检查BiliResp的code字段
+        // B站搜索API code=99 表示参数错误，打印payload帮助调试
         if bili_resp.code != 0 {
-            return Err(anyhow!("搜索漫画失败，预料之外的code: {bili_resp:?}"));
+            return Err(anyhow!("搜索漫画失败，code:{} msg:{}，请求参数: keyword={} page_num={}", bili_resp.code, bili_resp.msg, keyword, page_num));
         }
         // 检查BiliResp的data是否存在
         let Some(data) = bili_resp.data else {
