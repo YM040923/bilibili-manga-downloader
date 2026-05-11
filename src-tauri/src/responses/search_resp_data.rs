@@ -14,14 +14,28 @@ pub struct SearchRespData {
 #[serde(rename_all = "camelCase")]
 pub struct SearchComicRespData {
     pub list: Vec<ComicInSearchRespData>,
-    #[serde(rename = "total_page")]
+    #[serde(rename = "total_page", default)]
     pub total_page: i64,
-    #[serde(rename = "total_num")]
+    #[serde(rename = "total_num", default)]
     pub total_num: i64,
+    #[serde(default)]
     pub similar: String,
-    #[serde(rename = "se_id")]
+    #[serde(rename = "se_id", default)]
     pub se_id: String,
-    pub banner: BannerRespData,
+    #[serde(default)]
+    pub banner: Option<BannerRespData>,
+    #[serde(default, rename = "has_complete_match")]
+    pub has_complete_match: bool,
+    #[serde(skip, default)]
+    pub intervene: Option<serde_json::Value>,
+    #[serde(skip, default)]
+    pub jump: Option<serde_json::Value>,
+    #[serde(default, rename = "no_result_reason")]
+    pub no_result_reason: i64,
+    #[serde(skip, default)]
+    pub recommends: Vec<serde_json::Value>,
+    #[serde(default, rename = "search_no_result_recommend_text")]
+    pub search_no_result_recommend_text: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
@@ -45,6 +59,16 @@ pub struct ComicInSearchRespData {
     #[serde(rename = "type")]
     pub type_field: i64,
     pub wiki: WikiRespData,
+    #[serde(skip, default)]
+    pub goods: Option<serde_json::Value>,
+    #[serde(default)]
+    pub recommend: String,
+    #[serde(skip, default)]
+    pub review: Option<serde_json::Value>,
+    #[serde(default, rename = "short_intro")]
+    pub short_intro: String,
+    #[serde(skip, default)]
+    pub tags: Vec<serde_json::Value>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
