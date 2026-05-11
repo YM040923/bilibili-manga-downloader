@@ -23,8 +23,10 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use tauri_specta::Event;
 
-const UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36";
-const SEC_CH_UA: &str = r#""Google Chrome";v="137", "Chromium";v="137", "Not_A Brand";v="24""#;
+const UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
+const SEC_CH_UA: &str = r#""Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99""#;
+/// B站漫画API必需的查询参数（风控），从浏览器抓包获得
+const MANGA_QUERY: &str = "device=pc&platform=web&nov=27&a=810";
 
 /// Apply common manga API request headers
 fn apply_manga_headers(
@@ -218,11 +220,12 @@ impl BiliClient {
         });
         let referer = "https://manga.bilibili.com/search?from=manga_homepage";
         // 发送搜索漫画请求
+        let url = format!("https://manga.bilibili.com/twirp/comic.v1.Comic/Search?{MANGA_QUERY}");
         let builder = self
             .http_client
             .read()
             .await
-            .post("https://manga.bilibili.com/twirp/search.v1.Search/SearchKeyword");
+            .post(&url);
         let http_resp = apply_manga_headers(builder, referer, &cookie)
             .json(&payload)
             .send()
@@ -257,18 +260,14 @@ impl BiliClient {
     pub async fn get_comic(&self, comic_id: i64) -> anyhow::Result<Comic> {
         let cookie = self.cookie();
         let referer = format!("https://manga.bilibili.com/detail/mc{comic_id}?from=manga_person");
-        let params = json!({
-            "device": "pc",
-            "platform": "web",
-        });
         let payload = json!({"comic_id": comic_id});
         // 发送获取漫画详情请求
+        let url = format!("https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail?{MANGA_QUERY}");
         let builder = self
             .http_client
             .read()
             .await
-            .post("https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail")
-            .query(&params);
+            .post(&url);
         let http_resp = apply_manga_headers(builder, &referer, &cookie)
             .json(&payload)
             .send()
@@ -313,15 +312,11 @@ impl BiliClient {
     ) -> anyhow::Result<ImageIndexRespData> {
         let cookie = self.cookie();
         let referer = format!("https://manga.bilibili.com/mc{comic_id}/{episode_id}");
-        let params = json!({
-            "device": "pc",
-            "platform": "web",
-        });
         let payload = json!({"ep_id": episode_id});
         // 发送获取ImageIndex的请求
+        let url = format!("https://manga.bilibili.com/twirp/comic.v1.Comic/GetImageIndex?{MANGA_QUERY}");
         let builder = self.http_client.read().await
-            .post("https://manga.bilibili.com/twirp/comic.v1.Comic/GetImageIndex")
-            .query(&params);
+            .post(&url);
         let http_resp = apply_manga_headers(builder, &referer, &cookie)
             .json(&payload)
             .send()
@@ -367,16 +362,12 @@ impl BiliClient {
     ) -> anyhow::Result<ImageTokenRespData> {
         let cookie = self.cookie();
         let referer = format!("https://manga.bilibili.com/mc{comic_id}/{episode_id}");
-        let params = json!({
-            "device": "pc",
-            "platform": "web",
-        });
         let urls_str = serde_json::to_string(urls)?;
         let payload = json!({"urls": urls_str});
         // 发送获取ImageToken的请求
+        let url = format!("https://manga.bilibili.com/twirp/comic.v1.Comic/ImageToken?{MANGA_QUERY}");
         let builder = self.http_client.read().await
-            .post("https://manga.bilibili.com/twirp/comic.v1.Comic/ImageToken")
-            .query(&params);
+            .post(&url);
         let http_resp = apply_manga_headers(builder, &referer, &cookie)
             .json(&payload)
             .send()
