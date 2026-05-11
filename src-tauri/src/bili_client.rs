@@ -214,9 +214,9 @@ impl BiliClient {
     pub async fn search(&self, keyword: &str, page_num: i64) -> anyhow::Result<SearchRespData> {
         let cookie = self.cookie();
         let payload = json!({
-            "keyword": keyword,
-            "page_num": page_num,
-            "page_size": 20,
+            "keyWord": keyword,
+            "pageNum": page_num,
+            "pageSize": 20,
         });
         let referer = "https://manga.bilibili.com/search?from=manga_homepage";
         // 发送搜索漫画请求
