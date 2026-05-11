@@ -1,8 +1,8 @@
 [package]
 name = "bilibili-manga-downloader"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "0.12.0"
+description = "Bilibili Manga Downloader - 哔哩哔哩漫画下载器"
+authors = ["YM040923"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

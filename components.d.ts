@@ -11,6 +11,7 @@ declare module 'vue' {
     CookieLoginDialog: typeof import('./src/components/CookieLoginDialog.vue')['default']
     DownloadingList: typeof import('./src/components/DownloadingList.vue')['default']
     EpisodePane: typeof import('./src/components/EpisodePane.vue')['default']
+    NAlert: typeof import('naive-ui')['NAlert']
     NAvatar: typeof import('naive-ui')['NAvatar']
     NButton: typeof import('naive-ui')['NButton']
     NCard: typeof import('naive-ui')['NCard']
@@ -32,6 +33,7 @@ declare module 'vue' {
     NRadioGroup: typeof import('naive-ui')['NRadioGroup']
     NTabPane: typeof import('naive-ui')['NTabPane']
     NTabs: typeof import('naive-ui')['NTabs']
+    NText: typeof import('naive-ui')['NText']
     SearchPane: typeof import('./src/components/SearchPane.vue')['default']
     SettingsDialog: typeof import('./src/components/SettingsDialog.vue')['default']
   }

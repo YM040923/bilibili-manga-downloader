@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct BiliResp {
     pub code: i64,
-    #[serde(default, alias = "message")]
+    #[serde(default, alias = "message", alias = "msg")]
     pub msg: String,
     pub data: Option<serde_json::Value>,
 }

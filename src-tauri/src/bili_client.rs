@@ -23,6 +23,31 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use tauri_specta::Event;
 
+const UA: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36";
+const SEC_CH_UA: &str = r#""Google Chrome";v="137", "Chromium";v="137", "Not_A Brand";v="24""#;
+
+/// Apply common manga API request headers
+fn apply_manga_headers(
+    builder: reqwest_middleware::RequestBuilder,
+    referer: &str,
+    cookie: &str,
+) -> reqwest_middleware::RequestBuilder {
+    builder
+        .header("accept", "application/json, text/plain, */*")
+        .header("accept-language", "zh-CN,zh;q=0.9")
+        .header("content-type", "application/json;charset=UTF-8")
+        .header("origin", "https://manga.bilibili.com")
+        .header("referer", referer)
+        .header("sec-ch-ua", SEC_CH_UA)
+        .header("sec-ch-ua-mobile", "?0")
+        .header("sec-ch-ua-platform", r#""Windows""#)
+        .header("sec-fetch-dest", "empty")
+        .header("sec-fetch-mode", "cors")
+        .header("sec-fetch-site", "same-origin")
+        .header("user-agent", UA)
+        .header("cookie", cookie)
+}
+
 #[allow(clippy::unreadable_literal)]
 #[derive(Clone)]
 pub struct BiliClient {
@@ -150,7 +175,9 @@ impl BiliClient {
             .read()
             .await
             .get("https://api.bilibili.com/x/web-interface/nav")
+            .header("user-agent", UA)
             .header("cookie", cookie)
+            .header("referer", "https://www.bilibili.com/")
             .send()
             .await?;
         // 检查http响应状态码
@@ -232,27 +259,13 @@ impl BiliClient {
         });
         let payload = json!({"comic_id": comic_id});
         // 发送获取漫画详情请求
-        let http_resp = self
+        let builder = self
             .http_client
             .read()
             .await
             .post("https://manga.bilibili.com/twirp/comic.v1.Comic/ComicDetail")
-            .query(&params)
-            .header("accept", "application/json, text/plain, */*")
-            .header("accept-encoding", "gzip, deflate, br, zstd")
-            .header("accept-language", "zh-CN,zh;q=0.9")
-            .header("content-type", "application/json;charset=UTF-8")
-            .header("cookie", cookie)
-            .header("origin", "https://manga.bilibili.com")
-            .header("priority", "u=1, i")
-            .header("referer", referer)
-            .header("sec-ch-ua", r#""Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24""#)
-            .header("sec-ch-ua-mobile", "?0")
-            .header("sec-ch-ua-mobile", r#""Windows""#)
-            .header("sec-fetch-dest", "empty")
-            .header("sec-fetch-mode", "cors")
-            .header("sec-fetch-site", "same-origin")
-            .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+            .query(&params);
+        let http_resp = apply_manga_headers(builder, &referer, &cookie)
             .json(&payload)
             .send()
             .await?;
@@ -302,24 +315,10 @@ impl BiliClient {
         });
         let payload = json!({"ep_id": episode_id});
         // 发送获取ImageIndex的请求
-        let http_resp = self.http_client.read().await
+        let builder = self.http_client.read().await
             .post("https://manga.bilibili.com/twirp/comic.v1.Comic/GetImageIndex")
-            .query(&params)
-            .header("accept", "application/json, text/plain, */*")
-            .header("accept-encoding", "gzip, deflate, br, zstd")
-            .header("accept-language", "zh-CN,zh;q=0.9")
-            .header("content-type", "application/json;charset=UTF-8")
-            .header("cookie", cookie)
-            .header("origin", "https://manga.bilibili.com")
-            .header("priority", "u=1, i")
-            .header("referer", referer)
-            .header("sec-ch-ua", r#""Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24""#)
-            .header("sec-ch-ua-mobile", "?0")
-            .header("sec-ch-ua-mobile", r#""Windows""#)
-            .header("sec-fetch-dest", "empty")
-            .header("sec-fetch-mode", "cors")
-            .header("sec-fetch-site", "same-origin")
-            .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+            .query(&params);
+        let http_resp = apply_manga_headers(builder, &referer, &cookie)
             .json(&payload)
             .send()
             .await?;
@@ -371,24 +370,10 @@ impl BiliClient {
         let urls_str = serde_json::to_string(urls)?;
         let payload = json!({"urls": urls_str});
         // 发送获取ImageToken的请求
-        let http_resp = self.http_client.read().await
+        let builder = self.http_client.read().await
             .post("https://manga.bilibili.com/twirp/comic.v1.Comic/ImageToken")
-            .query(&params)
-            .header("accept", "application/json, text/plain, */*")
-            .header("accept-encoding", "gzip, deflate, br, zstd")
-            .header("accept-language", "zh-CN,zh;q=0.9")
-            .header("content-type", "application/json;charset=UTF-8")
-            .header("cookie", cookie)
-            .header("origin", "https://manga.bilibili.com")
-            .header("priority", "u=1, i")
-            .header("referer", referer)
-            .header("sec-ch-ua", r#""Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24""#)
-            .header("sec-ch-ua-mobile", "?0")
-            .header("sec-ch-ua-mobile", r#""Windows""#)
-            .header("sec-fetch-dest", "empty")
-            .header("sec-fetch-mode", "cors")
-            .header("sec-fetch-site", "same-origin")
-            .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+            .query(&params);
+        let http_resp = apply_manga_headers(builder, &referer, &cookie)
             .json(&payload)
             .send()
             .await?;
@@ -424,18 +409,17 @@ impl BiliClient {
     pub async fn get_image_bytes(&self, url: &str) -> anyhow::Result<Bytes> {
         // 发送下载图片请求
         let http_resp = self.http_client.read().await.get(url)
-            .header("accept", "*/*")
-            .header("accept-encoding", "gzip, deflate, br, zstd")
+            .header("accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
             .header("accept-language", "zh-CN,zh;q=0.9")
             .header("origin", "https://manga.bilibili.com")
             .header("referer", "https://manga.bilibili.com/")
-            .header("sec-ch-ua", r#""Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24""#)
+            .header("sec-ch-ua", SEC_CH_UA)
             .header("sec-ch-ua-mobile", "?0")
-            .header("sec-ch-ua-mobile", r#""Windows""#)
-            .header("sec-fetch-dest", "empty")
-            .header("sec-fetch-mode", "cors")
+            .header("sec-ch-ua-platform", r#""Windows""#)
+            .header("sec-fetch-dest", "image")
+            .header("sec-fetch-mode", "no-cors")
             .header("sec-fetch-site", "cross-site")
-            .header("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+            .header("user-agent", UA)
             .send()
             .await?;
         // 检查http响应状态码

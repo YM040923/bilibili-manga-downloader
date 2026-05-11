@@ -148,43 +148,66 @@ pub struct ComicRespData {
 #[serde(rename_all = "camelCase")]
 pub struct EpisodeRespData {
     pub id: i64,
+    #[serde(default)]
     pub ord: f64,
+    #[serde(default)]
     pub read: i64,
     #[serde(rename = "pay_mode")]
+    #[serde(default)]
     pub pay_mode: i64,
     #[serde(rename = "is_locked")]
+    #[serde(default)]
     pub is_locked: bool,
     #[serde(rename = "pay_gold")]
+    #[serde(default)]
     pub pay_gold: i64,
+    #[serde(default)]
     pub size: i64,
     #[serde(rename = "short_title")]
+    #[serde(default)]
     pub short_title: String,
     #[serde(rename = "is_in_free")]
+    #[serde(default)]
     pub is_in_free: bool,
+    #[serde(default)]
     pub title: String,
+    #[serde(default)]
     pub cover: String,
     #[serde(rename = "pub_time")]
+    #[serde(default)]
     pub pub_time: String,
+    #[serde(default)]
     pub comments: i64,
     #[serde(rename = "unlock_expire_at")]
+    #[serde(default)]
     pub unlock_expire_at: String,
     #[serde(rename = "unlock_type")]
+    #[serde(default)]
     pub unlock_type: i64,
     #[serde(rename = "allow_wait_free")]
+    #[serde(default)]
     pub allow_wait_free: bool,
+    #[serde(default)]
     pub progress: String,
     #[serde(rename = "like_count")]
+    #[serde(default)]
     pub like_count: i64,
     #[serde(rename = "chapter_id")]
+    #[serde(default)]
     pub chapter_id: i64,
     #[serde(rename = "type")]
+    #[serde(default)]
     pub type_field: i64,
+    #[serde(default)]
     pub extra: i64,
     #[serde(rename = "image_count")]
+    #[serde(default)]
     pub image_count: i64,
     #[serde(rename = "index_last_modified")]
+    #[serde(default)]
     pub index_last_modified: String,
     #[serde(rename = "jump_url")]
+    #[serde(default)]
     pub jump_url: String,
 }
 

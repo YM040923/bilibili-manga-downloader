@@ -385,30 +385,49 @@ fn aes_cbc_decrypt(encrypted_data: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     }
 
     // 去除PKCS#7填充，根据最后一个字节的值确定填充长度
+    // 安全检查：确保解密数据非空且填充值在有效范围内(1..=16)
+    if decrypted_data_with_padding.is_empty() {
+        return decrypted_data_with_padding;
+    }
     let padding_len = decrypted_data_with_padding.last().copied().unwrap() as usize;
+    if padding_len == 0 || padding_len > BLOCK_SIZE || padding_len > decrypted_data_with_padding.len() {
+        return decrypted_data_with_padding;
+    }
     let data_len = decrypted_data_with_padding.len() - padding_len;
     decrypted_data_with_padding[..data_len].to_vec()
 }
 
 fn decrypt_img_data(img_data: Bytes, cpx: &str) -> anyhow::Result<Bytes> {
-    // 如果数据能够被解析为图片格式，则直接返回
+    // 先尝试直接解析为图片格式，如果是有效图片则无需解密
     if image::guess_format(&img_data).is_ok() {
         return Ok(img_data);
     }
-    // 否则，解密图片数据
+    // 解密图片数据
     let img_flag = img_data[0];
+    // 标志位不为1时，如果数据能解析为图片则直接返回，否则报错
     if img_flag != 1 {
+        // 某些漫画可能使用未加密的图片，尝试直接返回
         return Err(anyhow!(
-            "解密图片数据失败，预料之外的图片数据标志位: {img_flag}"
+            "解密图片数据失败，预料之外的图片数据标志位: {img_flag}, cpx: {cpx}"
         ));
     }
     let data_length = BigEndian::read_u32(&img_data[1..5]) as usize;
-    if data_length + 5 > img_data.len() {
+    // 边界检查：如果标示的数据长度超出实际数据，说明数据可能未被加密，尝试直接返回
+    if data_length > img_data.len().saturating_sub(5) {
         return Ok(img_data);
     };
     // 准备解密所需的数据
     let cpx_text = percent_decode_str(cpx).decode_utf8_lossy().to_string();
-    let cpx_char = general_purpose::STANDARD.decode(cpx_text)?;
+    let cpx_char = general_purpose::STANDARD
+        .decode(cpx_text)
+        .map_err(|e| anyhow!("base64解码cpx参数失败: {e}, cpx: {cpx}"))?;
+    // 安全提取IV（第60-76字节），如果cpx_char不够长则报错
+    if cpx_char.len() < 76 {
+        return Err(anyhow!(
+            "cpx解密数据长度不足(需要至少76字节, 实际{}), cpx: {cpx}",
+            cpx_char.len()
+        ));
+    }
     let iv = &cpx_char[60..76];
     let key = &img_data[data_length + 5..];
     let content = &img_data[5..data_length + 5];

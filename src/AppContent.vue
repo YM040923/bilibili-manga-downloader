@@ -77,7 +77,7 @@ async function checkUpdate() {
     for (let i = 0; i < 3; i++) {
       notification.error({
         title: "有重要更新，请立刻停止使用当前版本",
-        description: "请前往 https://github.com/lanyeeee/bilibili-manga-downloader 查看Release页面",
+        description: "请前往 https://github.com/YM040923/bilibili-manga-downloader 查看Release页面",
         content: `重要更新版本: ${versions}`,
         meta: "很重要所以说3遍"
       });
@@ -89,7 +89,7 @@ async function checkUpdate() {
     const versions = checkUpdateResult.normalVersions.join(", ");
     notification.info({
       title: "有可选更新",
-      description: "请前往 https://github.com/lanyeeee/bilibili-manga-downloader 的Release页面下载",
+      description: "请前往 https://github.com/YM040923/bilibili-manga-downloader 的Release页面下载",
       content: `可选更新版本: ${versions}`,
       meta: "如果当前使用没有问题，可以不更新"
     });
@@ -97,10 +97,6 @@ async function checkUpdate() {
   }
 
   notification.success({title: "当前版本是最新版本", duration: 2000});
-}
-
-async function test() {
-
 }
 
 </script>
@@ -121,7 +117,6 @@ async function test() {
       <div class="basis-1/2 flex flex-col overflow-hidden h-full">
         <div class="flex">
           <n-button @click="cookieLoginDialogShowing=true" type="primary">Cookie登录</n-button>
-          <n-button @click="test">测试用</n-button>
           <div v-if="userProfile!==undefined" class="flex flex-justify-end">
             <n-avatar round
                       :img-props="{referrerpolicy: 'no-referrer'}"

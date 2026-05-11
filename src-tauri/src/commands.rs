@@ -130,8 +130,8 @@ pub fn show_path_in_file_manager(path: &str) -> CommandResult<()> {
 pub async fn check_update(app: AppHandle) -> CommandResult<CheckUpdateResult> {
     let http_client = reqwest::ClientBuilder::new().build()?;
     let http_resp = http_client
-        .get("https://api.github.com/repos/lanyeeee/bilibili-manga-downloader/releases")
-        .header("user-agent", "lanyeeee/bilibili-manga-downloader")
+        .get("https://api.github.com/repos/YM040923/bilibili-manga-downloader/releases")
+        .header("user-agent", "YM040923/bilibili-manga-downloader")
         .send()
         .await?;
     let status = http_resp.status();
