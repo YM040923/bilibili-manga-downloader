@@ -1,8 +1,8 @@
-//! 通过 Tauri WebView 绕过 B站 ultra_sign 签名获取漫画数据
+//! 通过 Tauri WebView 绕过 B站 API 签名获取数据
 //!
-//! 原理：B站漫画 API 添加了 ultra_sign 签名，非浏览器环境无法计算。
-//! Tauri 自带的 WebView 使用系统的 WebView2（Windows），行为等同于 Chrome/Edge，
-//! B站前端 JS 可以正常计算签名。我们注入脚本拦截 API 响应。
+//! B站 manga API 2026年新增 ultra_sign/m2 签名，非浏览器环境无法计算。
+//! 使用 Tauri WebView2（等同 Chrome），B站前端 JS 自行处理签名。
+//! 我们注入脚本拦截 API 响应并写入 document.title，Rust 端轮询读取。
 
 use crate::responses::BiliResp;
 use crate::types::Comic;
@@ -10,94 +10,105 @@ use anyhow::{anyhow, Context};
 use std::time::Duration;
 use tauri::{AppHandle, Url, WebviewUrl, WebviewWindowBuilder};
 
-pub fn get_comic_via_webview(app: &AppHandle, comic_id: i64) -> anyhow::Result<Comic> {
-    let url_str = format!("https://manga.bilibili.com/detail/mc{comic_id}");
-    let url = Url::parse(&url_str).context("解析漫画详情URL失败")?;
-
-    // 注入脚本：在页面加载前拦截 fetch 和 XHR，捕获 ComicDetail 响应
-    let init_script = r#"
-(function() {
+/// 注入脚本：拦截 fetch/XHR，将匹配 API 的响应写入全局变量
+fn interceptor_script(api_name: &str) -> String {
+    format!(
+        r#"
+(function() {{
+    const KEY = '__scraped_{api_name}__';
     // 拦截 fetch
-    const origFetch = window.fetch;
-    window.fetch = function(...args) {
-        const resource = args[0];
-        const urlStr = typeof resource === 'string' ? resource : (resource.url || '');
-        if (urlStr.includes('ComicDetail')) {
-            return origFetch.apply(this, args).then(r => {
-                if (r.ok) {
-                    const cloned = r.clone();
-                    cloned.text().then(t => { window.__comic_detail_data__ = t; });
-                }
+    window._origFetch = window.fetch;
+    window.fetch = function(...args) {{
+        const urlStr = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+        if (urlStr.includes('{api_name}')) {{
+            return window._origFetch.apply(this, args).then(r => {{
+                if (r.ok) {{ r.clone().text().then(t => {{ window[KEY] = t; }}); }}
                 return r;
-            });
-        }
-        return origFetch.apply(this, args);
-    };
-    // 拦截 XMLHttpRequest
+            }});
+        }}
+        return window._origFetch.apply(this, args);
+    }};
+    // 拦截 XHR
     const origOpen = XMLHttpRequest.prototype.open;
     const origSend = XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.open = function(method, url) {
-        this.__url = url;
-        return origOpen.apply(this, arguments);
-    };
-    XMLHttpRequest.prototype.send = function(body) {
-        if (this.__url && this.__url.includes('ComicDetail')) {
-            this.addEventListener('load', function() {
-                if (this.status === 200) {
-                    window.__comic_detail_data__ = this.responseText;
-                }
-            });
-        }
+    XMLHttpRequest.prototype.open = function(method, url) {{
+        this.__url = url; return origOpen.apply(this, arguments);
+    }};
+    XMLHttpRequest.prototype.send = function(body) {{
+        if (this.__url && this.__url.includes('{api_name}')) {{
+            this.addEventListener('load', function() {{
+                if (this.status === 200) {{ window[KEY] = this.responseText; }}
+            }});
+        }}
         return origSend.apply(this, arguments);
-    };
-})();
-"#;
+    }};
+}})();
+"#
+    )
+}
 
-    // 创建隐藏 WebView
-    let label = format!("comic_scraper_{}", comic_id);
-    let webview = WebviewWindowBuilder::new(app, &label, WebviewUrl::External(url))
+/// 创建隐藏 WebView 加载页面，等待注入脚本捕获到数据
+fn scrape_api(app: &AppHandle, url: &str, api_name: &str, timeout_secs: u64) -> anyhow::Result<String> {
+    let parsed_url = Url::parse(url).context("解析URL失败")?;
+    let label = format!("scraper_{}", rand::random::<u32>());
+    let init_script = interceptor_script(api_name);
+
+    // 轮询脚本：检查数据并写入 title
+    let key = format!("__scraped_{api_name}__");
+    let poll_script = format!(
+        "setInterval(function(){{ var d=window['{key}']; if(d){{ document.title='SCRAPED:'+d; }} }}, 300);"
+    );
+    let full_script = format!("{}\n{}", init_script, poll_script);
+
+    let webview = WebviewWindowBuilder::new(app, &label, WebviewUrl::External(parsed_url))
         .title("")
         .inner_size(1.0, 1.0)
         .visible(false)
-        .initialization_script(init_script)
+        .initialization_script(&full_script)
         .build()
         .context("创建WebView失败")?;
 
-    // 轮询等待数据（通过 document.title 变化判断）
     let start = std::time::Instant::now();
     let result = loop {
-        if start.elapsed() > Duration::from_secs(60) {
-            break Err(anyhow!("获取漫画详情超时（60秒），可能Cookie已过期或网络问题"));
+        if start.elapsed() > Duration::from_secs(timeout_secs) {
+            break Err(anyhow!("操作超时（{}秒）", timeout_secs));
         }
-
         if let Ok(title) = webview.title() {
             if title.starts_with("SCRAPED:") {
-                let json_str = &title[8..];
-                break Ok(json_str.to_string());
-            } else if title == "TIMEOUT" {
-                break Err(anyhow!("页面已加载但未获取到ComicDetail数据，请确认已用完整Cookie登录"));
+                let json_str = title[8..].to_string();
+                break Ok(json_str);
             }
         }
-
-        std::thread::sleep(Duration::from_millis(500));
+        std::thread::sleep(Duration::from_millis(300));
     };
 
-    // 清理
     let _ = webview.close();
+    result
+}
 
-    let json_str = result?;
+pub fn get_comic_via_webview(app: &AppHandle, comic_id: i64) -> anyhow::Result<Comic> {
+    let url = format!("https://manga.bilibili.com/detail/mc{comic_id}");
+    let json_str = scrape_api(app, &url, "ComicDetail", 60)?;
 
-    // 解析 BiliResp → ComicRespData → Comic
-    let bili_resp: BiliResp =
-        serde_json::from_str(&json_str).context("解析ComicDetail API响应失败")?;
+    let bili_resp: BiliResp = serde_json::from_str(&json_str)?;
     if bili_resp.code != 0 {
-        return Err(anyhow!("ComicDetail API返回错误: code={} msg={}", bili_resp.code, bili_resp.msg));
+        return Err(anyhow!("ComicDetail错误: code={} msg={}", bili_resp.code, bili_resp.msg));
     }
-    let data = bili_resp.data.context("ComicDetail API返回data为空")?;
-    use crate::responses::ComicRespData;
-    let comic_data: ComicRespData =
-        serde_json::from_value(data).context("解析ComicRespData失败（API返回格式可能已变化）")?;
-    let comic = Comic::from(app, comic_data);
+    let data = bili_resp.data.context("data为空")?;
+    let comic_data: crate::responses::ComicRespData = serde_json::from_value(data)?;
+    Ok(Comic::from(app, comic_data))
+}
 
-    Ok(comic)
+use crate::responses::SearchRespData;
+pub fn search_via_webview(app: &AppHandle, keyword: &str, page_num: i64) -> anyhow::Result<SearchRespData> {
+    let encoded: String = percent_encoding::utf8_percent_encode(keyword, percent_encoding::NON_ALPHANUMERIC).collect();
+    let url = format!("https://manga.bilibili.com/search?keyword={encoded}&page={page_num}");
+    let json_str = scrape_api(app, &url, "Search", 30)?;
+
+    let bili_resp: BiliResp = serde_json::from_str(&json_str)?;
+    if bili_resp.code != 0 {
+        return Err(anyhow!("Search错误: code={} msg={}", bili_resp.code, bili_resp.msg));
+    }
+    let data = bili_resp.data.context("data为空")?;
+    Ok(serde_json::from_value(data)?)
 }

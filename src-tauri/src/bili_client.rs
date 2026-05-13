@@ -432,6 +432,7 @@ impl BiliClient {
     fn cookie(&self) -> String {
         self.app.state::<RwLock<Config>>().read().cookie.clone()
     }
+
 }
 
 fn create_http_client(app: &AppHandle) -> ClientWithMiddleware {

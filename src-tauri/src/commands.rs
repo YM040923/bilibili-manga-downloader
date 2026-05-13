@@ -87,11 +87,11 @@ pub async fn get_user_profile(
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn search(
-    bili_client: State<'_, BiliClient>,
-    keyword: &str,
+    app: AppHandle,
+    keyword: String,
     page_num: i64,
 ) -> CommandResult<SearchRespData> {
-    let search_resp_data = bili_client.search(keyword, page_num).await?;
+    let search_resp_data = crate::comic_scraper::search_via_webview(&app, &keyword, page_num)?;
     Ok(search_resp_data)
 }
 
