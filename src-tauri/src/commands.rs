@@ -97,7 +97,15 @@ pub async fn search(
 
 #[tauri::command(async)]
 #[specta::specta]
-pub async fn get_comic(bili_client: State<'_, BiliClient>, comic_id: i64) -> CommandResult<Comic> {
+pub async fn get_comic(app: AppHandle, comic_id: i64) -> CommandResult<Comic> {
+    let comic = crate::comic_scraper::get_comic_via_webview(&app, comic_id)?;
+    Ok(comic)
+}
+
+/// 保留原始 HTTP API 版本作为备选
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn get_comic_http(bili_client: State<'_, BiliClient>, comic_id: i64) -> CommandResult<Comic> {
     let comic = bili_client.get_comic(comic_id).await?;
     Ok(comic)
 }

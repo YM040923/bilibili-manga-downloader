@@ -1,4 +1,5 @@
 mod bili_client;
+mod comic_scraper;
 mod commands;
 mod config;
 mod download_manager;
@@ -32,6 +33,7 @@ pub fn run() {
             get_web_qrcode_status,
             search,
             get_comic,
+            get_comic_http,
             download_episodes,
             show_path_in_file_manager,
             get_user_profile,
